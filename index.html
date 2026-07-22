@@ -4,23 +4,23 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-<!-- Tambahan Favicon dengan Icon Font Awesome -->
-<link rel="icon" type="image/x-icon" href="https://i.ibb.co.com/SwkPCQn9/Kanpa-3.png">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <!-- Favicon -->
+  <link rel="icon" type="image/x-icon" href="https://i.ibb.co.com/SwkPCQn9/Kanpa-3.png">
 
   <title>Element Directory</title>
   
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
   
-  <!-- React 18 & ReactDOM 18 UMD (Universal Module Definition) -->
+  <!-- React 18 & ReactDOM 18 UMD -->
   <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
   
-  <!-- Babel Standalone to compile JSX on the fly in the browser -->
+  <!-- Babel Standalone -->
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
-  <!-- Firebase v9 Compat SDKs (Perfect for single-file HTML without bundlers) -->
+  <!-- Firebase v9 Compat SDKs -->
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
@@ -56,17 +56,14 @@
   <script type="text/babel">
     const { useState, useEffect, useRef } = React;
 
-    // =========================================================================
-    // SILAKAN EDIT / GANTI DENGAN FIREBASE CONFIG ANDA DI SINI
-    // =========================================================================
-  const firebaseConfig = {
-  apiKey: "AIzaSyCop2DkP6V6jbCWYQglDZKwvGyZVLEcUy4",
-  authDomain: "kanpa-directory-element.firebaseapp.com",
-  projectId: "kanpa-directory-element",
-  storageBucket: "kanpa-directory-element.firebasestorage.app",
-  messagingSenderId: "265083975683",
-  appId: "1:265083975683:web:f4840b12f42a5e3361f636"
-};
+    const firebaseConfig = {
+      apiKey: "AIzaSyCop2DkP6V6jbCWYQglDZKwvGyZVLEcUy4",
+      authDomain: "kanpa-directory-element.firebaseapp.com",
+      projectId: "kanpa-directory-element",
+      storageBucket: "kanpa-directory-element.firebasestorage.app",
+      messagingSenderId: "265083975683",
+      appId: "1:265083975683:web:f4840b12f42a5e3361f636"
+    };
 
     const appId = "element-directory-production";
 
@@ -74,15 +71,12 @@
     function getDirectImageUrl(url) {
       if (!url) return "";
       
-      // Deteksi Google Drive
       if (url.includes("drive.google.com") || url.includes("docs.google.com")) {
         let fileId = "";
-        // Format 1: /file/d/[ID]/view atau /file/d/[ID]/edit
         const fileDMatch = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
         if (fileDMatch && fileDMatch[1]) {
           fileId = fileDMatch[1];
         } else {
-          // Format 2: ?id=[ID]
           const idParamMatch = url.match(/[?&]id=([a-zA-Z0-9_-]+)/);
           if (idParamMatch && idParamMatch[1]) {
             fileId = idParamMatch[1];
@@ -90,12 +84,10 @@
         }
         
         if (fileId) {
-          // Gunakan API CDN Googleusercontent (Sangat cepat dan andal untuk tag <img>)
           return `https://lh3.googleusercontent.com/d/${fileId}`;
         }
       }
 
-      // Deteksi Dropbox
       if (url.includes("dropbox.com")) {
         return url.replace("?dl=0", "?raw=1").replace("&dl=0", "&raw=1");
       }
@@ -147,7 +139,6 @@
       }
     ];
 
-    // Safe Firebase initialization
     let firebaseApp = null;
     let auth = null;
     let db = null;
@@ -177,6 +168,8 @@
       const [selectedFilter, setSelectedFilter] = useState("Semua Divisi");
       const [isFilterDropdownOpen, setIsFilterDropdownOpen] = useState(false);
       
+      const [viewMode, setViewMode] = useState("list");
+
       const [isProfileOpen, setIsProfileOpen] = useState(false);
       const [isLoginOpen, setIsLoginOpen] = useState(false);
       const [showPassword, setShowPassword] = useState(false);
@@ -204,7 +197,6 @@
       const dropdownRef = useRef(null);
       const profileRef = useRef(null);
 
-      // Scroll Lock effect ketika modal terbuka
       useEffect(() => {
         const isAnyModalOpen = 
           isProfileOpen || 
@@ -645,11 +637,11 @@
               )}
             </div>
 
-            {/* Search & Filter Bar */}
-            <div className="w-full bg-slate-800/40 p-3 rounded-2xl border border-slate-800/80 backdrop-blur-sm shadow-xl flex flex-col md:flex-row gap-2 mb-6 relative z-20">
+            {/* Search, Filter Bar & Toggle View Mode */}
+            <div className="w-full bg-slate-800/40 p-3 rounded-2xl border border-slate-800/80 backdrop-blur-sm shadow-xl flex flex-col md:flex-row gap-2 mb-6 relative z-20 items-center">
               
               {/* Search Box */}
-              <div className="relative flex-1">
+              <div className="relative flex-1 w-full">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
                   <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -674,55 +666,85 @@
                 )}
               </div>
 
-              {/* Dropdown Filter */}
-              <div className="relative z-30" ref={dropdownRef}>
-                <button 
-                  onClick={() => setIsFilterDropdownOpen(!isFilterDropdownOpen)}
-                  className="w-full md:w-52 flex items-center justify-between gap-2 px-3.5 py-2.5 bg-slate-900 border border-slate-700/80 rounded-xl text-sm font-medium text-slate-200 hover:bg-slate-800 transition-all focus:outline-none"
-                >
-                  <div className="flex items-center gap-2">
-                    {selectedFilter !== "Semua Divisi" && (
-                      <span className={`w-3 h-3 rounded-full ${DIVISIONS[selectedFilter]?.color}`}></span>
-                    )}
-                    <span>{selectedFilter}</span>
-                  </div>
-                  <svg className={`w-4 h-4 text-slate-400 transition-transform duration-300 ${isFilterDropdownOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
-                  </svg>
-                </button>
+              {/* Controls Group: Dropdown Filter & View Mode Switcher */}
+              <div className="flex gap-2 w-full md:w-auto">
+                
+                {/* Dropdown Filter */}
+                <div className="relative z-30 flex-1 md:flex-initial" ref={dropdownRef}>
+                  <button 
+                    onClick={() => setIsFilterDropdownOpen(!isFilterDropdownOpen)}
+                    className="w-full md:w-48 flex items-center justify-between gap-2 px-3.5 py-2.5 bg-slate-900 border border-slate-700/80 rounded-xl text-sm font-medium text-slate-200 hover:bg-slate-800 transition-all focus:outline-none"
+                  >
+                    <div className="flex items-center gap-2 truncate">
+                      {selectedFilter !== "Semua Divisi" && (
+                        <span className={`w-3 h-3 rounded-full flex-shrink-0 ${DIVISIONS[selectedFilter]?.color}`}></span>
+                      )}
+                      <span className="truncate">{selectedFilter}</span>
+                    </div>
+                    <svg className={`w-4 h-4 text-slate-400 transition-transform duration-300 flex-shrink-0 ${isFilterDropdownOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
 
-                {isFilterDropdownOpen && (
-                  <div className="absolute right-0 left-0 md:left-auto md:w-52 mt-2 bg-slate-950 border border-slate-800 rounded-xl shadow-2xl z-[40] overflow-hidden divide-y divide-slate-800/60 py-1 animate-fadeIn">
-                    <button
-                      onClick={() => {
-                        setSelectedFilter("Semua Divisi");
-                        setIsFilterDropdownOpen(false);
-                      }}
-                      className={`w-full text-left px-4 py-2.5 text-xs hover:bg-slate-850 flex items-center gap-2 transition-colors ${selectedFilter === 'Semua Divisi' ? 'bg-indigo-600/10 text-indigo-400 font-bold' : 'text-slate-300'}`}
-                    >
-                      <span className="w-3 h-3 rounded-full border border-slate-600"></span>
-                      Semua Divisi
-                    </button>
-                    {Object.keys(DIVISIONS).map((key) => (
+                  {/* KOTAK UNGU SAMAR-SAMAR SAAT HOVER KATEGORI */}
+                  {isFilterDropdownOpen && (
+                    <div className="absolute right-0 left-0 md:left-auto md:w-52 mt-2 bg-slate-950 border border-slate-800 rounded-xl shadow-2xl z-[40] overflow-hidden divide-y divide-slate-800/60 py-1 animate-fadeIn">
                       <button
-                        key={key}
                         onClick={() => {
-                          setSelectedFilter(key);
+                          setSelectedFilter("Semua Divisi");
                           setIsFilterDropdownOpen(false);
                         }}
-                        className={`w-full text-left px-4 py-2.5 text-xs hover:bg-slate-850 flex items-center gap-2 transition-colors ${selectedFilter === key ? 'bg-indigo-600/10 text-indigo-400 font-bold' : 'text-slate-300'}`}
+                        className={`w-full text-left px-4 py-2.5 text-xs flex items-center gap-2 transition-all rounded-lg mx-0.5 w-[calc(100%-4px)] ${selectedFilter === 'Semua Divisi' ? 'bg-indigo-600/30 text-indigo-300 font-bold' : 'text-slate-300 hover:bg-indigo-600/20 hover:text-indigo-300'}`}
                       >
-                        <span className={`w-3 h-3 rounded-full ${DIVISIONS[key].color}`}></span>
-                        {key}
+                        <span className="w-3 h-3 rounded-full border border-slate-600"></span>
+                        Semua Divisi
                       </button>
-                    ))}
-                  </div>
-                )}
+                      {Object.keys(DIVISIONS).map((key) => (
+                        <button
+                          key={key}
+                          onClick={() => {
+                            setSelectedFilter(key);
+                            setIsFilterDropdownOpen(false);
+                          }}
+                          className={`w-full text-left px-4 py-2.5 text-xs flex items-center gap-2 transition-all rounded-lg mx-0.5 w-[calc(100%-4px)] ${selectedFilter === key ? 'bg-indigo-600/30 text-indigo-300 font-bold' : 'text-slate-300 hover:bg-indigo-600/20 hover:text-indigo-300'}`}
+                        >
+                          <span className={`w-3 h-3 rounded-full ${DIVISIONS[key].color}`}></span>
+                          {key}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* VIEW MODE TOGGLE SWITCH (List vs Grid) */}
+                <div className="flex bg-slate-900 p-1 border border-slate-700/80 rounded-xl">
+                  <button
+                    type="button"
+                    onClick={() => setViewMode("list")}
+                    className={`p-2 rounded-lg transition-all ${viewMode === 'list' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-slate-200'}`}
+                    title="Tampilan List"
+                  >
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
+                    </svg>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setViewMode("grid")}
+                    className={`p-2 rounded-lg transition-all ${viewMode === 'grid' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-slate-200'}`}
+                    title="Tampilan Grid"
+                  >
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+                    </svg>
+                  </button>
+                </div>
+
               </div>
 
             </div>
 
-            {/* Filter Status yang sudah Diperbaiki */}
+            {/* Filter Status */}
             <div className="w-full mb-4 flex justify-start items-center gap-2 px-1">
               <span className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">Banyaknya list:</span>
               <span className="px-2.5 py-0.5 text-xs rounded-full bg-indigo-500/15 border border-indigo-500/20 text-indigo-300 font-medium">
@@ -743,17 +765,19 @@
                   "Kadang yang dicari nggak ketemu, tapi rasa sakitnya selalu ada :)"
                 </p>
               </div>
-            ) : (
-              <div className="w-full flex flex-col gap-3 relative z-10">
+            ) : viewMode === "list" ? (
+              /* =========================================================================
+                 LIST VIEW MODE
+                 ========================================================================= */
+              <div className="w-full flex flex-col gap-3 relative z-10 animate-fadeIn">
                 {filteredDirectories.map((item) => {
                   const divMeta = DIVISIONS[item.category] || { color: 'bg-slate-500', text: 'text-slate-500', border: 'border-slate-500' };
                   
                   return (
                     <div 
                       key={item.id}
-                      className="relative bg-slate-800/20 hover:bg-slate-800/50 rounded-xl border border-slate-800/80 hover:border-slate-700/60 transition-all duration-300 shadow-md flex flex-col md:flex-row items-stretch"
+                      className="relative bg-slate-800/20 hover:bg-slate-800/50 rounded-xl border border-slate-800/80 hover:border-slate-700/60 transition-all duration-300 shadow-md flex flex-col md:flex-row items-stretch overflow-hidden"
                     >
-                      
                       {/* Left Column Content - Direct Card Link Redirection */}
                       <div 
                         onClick={() => {
@@ -762,39 +786,39 @@
                           }
                         }}
                         className="flex-1 p-4 flex flex-col justify-between gap-4 cursor-pointer select-none group"
-                        title="Buka Website"
+                        title={item.title}
                       >
                         <div className="flex items-center gap-2">
-                          {/* Colored Division Ring & Indicator */}
                           <span className={`w-3 h-3 rounded-full ${divMeta.color} ring-4 ring-slate-900/40 flex-shrink-0`}></span>
                           <h4 className="font-bold text-base md:text-lg text-slate-100 group-hover:text-indigo-400 transition-colors line-clamp-1">
                             {item.title}
                           </h4>
-                          <span className={`text-[9px] font-extrabold px-1.5 py-0.5 rounded ${divMeta.color}/10 ${divMeta.text} border ${divMeta.border}/30`}>
+                          <span className={`text-[9px] font-extrabold px-1.5 py-0.5 rounded ${divMeta.color}/10 ${divMeta.text} border ${divMeta.border}/30 flex-shrink-0`}>
                             {item.category}
                           </span>
                         </div>
 
-                        {/* Keyword copy prompt container */}
                         {item.keyword && (
                           <div 
                             onClick={(e) => e.stopPropagation()}
-                            className="flex items-center gap-1.5 self-start"
+                            className="flex items-center gap-2 self-start"
                           >
                             <span className="text-[11px] font-mono bg-slate-950/70 px-2.5 py-1 rounded-md border border-slate-800 flex items-center gap-1.5">
                               <span className="text-[9px] uppercase font-semibold text-indigo-400 tracking-wider">Keyword:</span>
                               <span className="text-slate-200 select-all">{item.keyword}</span>
                             </span>
                             
+                            {/* Area Box Copy Keyword */}
                             <button
                               type="button"
                               onClick={(e) => handleCopyText(e, item.keyword, "Keyword")}
-                              className="p-1 bg-slate-900 border border-slate-700/50 text-slate-400 hover:text-white rounded-md hover:bg-slate-800 transition-all active:scale-95"
+                              className="px-2.5 py-1.5 bg-slate-900 border border-slate-700/60 text-slate-300 hover:text-white rounded-lg hover:bg-indigo-600 transition-all active:scale-95 shadow-sm flex items-center gap-1.5"
                               title="Salin Keyword"
                             >
-                              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
                               </svg>
+                              <span className="text-[10px] font-bold uppercase tracking-wider">Salin</span>
                             </button>
                           </div>
                         )}
@@ -802,12 +826,10 @@
 
                       {/* Right Column Content - Tools, Copy URL & Preview Image */}
                       <div className="md:w-60 p-3 border-t md:border-t-0 md:border-l border-slate-800/80 flex md:flex-row justify-between items-center gap-3 bg-slate-950/10">
-                        
-                        {/* Control buttons */}
                         <div className="flex flex-col gap-1.5 w-full flex-1">
                           <button
                             onClick={(e) => handleCopyText(e, item.website, "Link Website")}
-                            className="flex items-center justify-center gap-1.5 w-full px-2.5 py-1.5 bg-slate-800 hover:bg-slate-750 text-slate-300 hover:text-white rounded-lg transition-all border border-slate-700/50 active:scale-95 text-xs font-semibold"
+                            className="flex items-center justify-center gap-1.5 w-full px-2.5 py-1.5 bg-slate-800 hover:bg-indigo-600 text-slate-300 hover:text-white rounded-lg transition-all border border-slate-700/50 active:scale-95 text-xs font-semibold"
                             title="Salin Link Website"
                           >
                             <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -816,7 +838,6 @@
                             <span>Salin Link</span>
                           </button>
 
-                          {/* Zeus controls */}
                           {isZeusMode && (
                             <div className="flex gap-1.5 w-full">
                               <button
@@ -838,7 +859,6 @@
                           )}
                         </div>
 
-                        {/* Image Preview Box Trigger */}
                         {item.imageLink && (
                           <div 
                             onClick={() => setActiveLargeImage(item.imageLink)}
@@ -853,16 +873,133 @@
                                 e.target.src = "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=600&auto=format&fit=crop&q=80";
                               }}
                             />
-                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/img:opacity-100 flex items-center justify-center transition-opacity">
+                            <div className="absolute inset-0 bg-slate-950/70 opacity-0 group-hover/img:opacity-100 flex flex-col items-center justify-center transition-all duration-200 p-1">
                               <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10.5 7.5v6m3-3h-6" />
                               </svg>
+                              <span className="text-[9px] font-bold text-white tracking-tight mt-0.5">Perbesar</span>
                             </div>
                           </div>
                         )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              /* =========================================================================
+                 GRID VIEW MODE
+                 ========================================================================= */
+              <div className="w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 relative z-10 animate-fadeIn">
+                {filteredDirectories.map((item) => {
+                  const divMeta = DIVISIONS[item.category] || { color: 'bg-slate-500', text: 'text-slate-500', border: 'border-slate-500' };
+                  
+                  return (
+                    <div 
+                      key={item.id}
+                      className="bg-slate-800/30 hover:bg-slate-800/60 rounded-2xl border border-slate-800/80 hover:border-slate-700/80 transition-all duration-300 shadow-xl overflow-hidden flex flex-col group"
+                    >
+                      {/* Image Preview Box dengan Overlay Kaca Pembesar & Teks "Perbesar" */}
+                      <div 
+                        className="relative w-full h-44 bg-slate-950 overflow-hidden cursor-zoom-in group/img"
+                        onClick={() => setActiveLargeImage(item.imageLink)}
+                      >
+                        <img 
+                          src={getDirectImageUrl(item.imageLink)} 
+                          alt={item.title} 
+                          className="w-full h-full object-cover group-hover/img:scale-105 transition-transform duration-300"
+                          onError={(e) => {
+                            e.target.src = "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=600&auto=format&fit=crop&q=80";
+                          }}
+                        />
 
+                        {/* HOVER OVERLAY KACA PEMBESAR */}
+                        <div className="absolute inset-0 bg-slate-950/70 opacity-0 group-hover/img:opacity-100 flex flex-col items-center justify-center transition-all duration-200">
+                          <svg className="w-7 h-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10.5 7.5v6m3-3h-6" />
+                          </svg>
+                          <span className="text-xs font-bold text-white tracking-wider mt-1 uppercase">Perbesar</span>
+                        </div>
                       </div>
 
+                      {/* Card Content */}
+                      <div className="p-4 flex-1 flex flex-col justify-between gap-3">
+                        <div>
+                          {/* SAMA PRESISI SEPERTI LIST VIEW: Titik Bulat, Judul, dan Badge Kategori Disampingnya */}
+                          <div className="flex items-center gap-2">
+                            <span className={`w-3 h-3 rounded-full ${divMeta.color} ring-4 ring-slate-900/40 flex-shrink-0`}></span>
+                            <h4 
+                              onClick={() => {
+                                if (item.website) window.open(item.website, '_blank', 'noopener,noreferrer');
+                              }}
+                              className="font-bold text-base text-slate-100 hover:text-indigo-400 transition-colors cursor-pointer line-clamp-1"
+                              title={item.title}
+                            >
+                              {item.title}
+                            </h4>
+                            <span className={`text-[9px] font-extrabold px-1.5 py-0.5 rounded ${divMeta.color}/10 ${divMeta.text} border ${divMeta.border}/30 flex-shrink-0`}>
+                              {item.category}
+                            </span>
+                          </div>
+
+                          {/* Keyword Container dengan Area Tombol Copy Lebih Besar */}
+                          {item.keyword && (
+                            <div className="mt-3 flex items-center justify-between bg-slate-950/70 px-3 py-2 rounded-xl border border-slate-800">
+                              <span className="text-[11px] font-mono text-slate-300 truncate mr-2">
+                                <span className="text-indigo-400 font-semibold mr-1.5">Keyword:</span>{item.keyword}
+                              </span>
+                              
+                              {/* Area Box Copy Keyword */}
+                              <button
+                                type="button"
+                                onClick={(e) => handleCopyText(e, item.keyword, "Keyword")}
+                                className="px-2 py-1 bg-slate-900 border border-slate-700/60 text-slate-300 hover:text-white rounded-lg hover:bg-indigo-600 transition-all active:scale-95 flex items-center gap-1 flex-shrink-0"
+                                title="Salin Keyword"
+                              >
+                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+                                </svg>
+                                <span className="text-[9px] font-bold uppercase tracking-wider">Salin</span>
+                              </button>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Actions */}
+                        <div className="pt-2 border-t border-slate-800/80 flex flex-col gap-2">
+                          <button
+                            onClick={(e) => handleCopyText(e, item.website, "Link Website")}
+                            className="flex items-center justify-center gap-1.5 w-full py-2 bg-slate-800 hover:bg-indigo-600 text-slate-200 hover:text-white rounded-xl transition-all border border-slate-700/50 active:scale-95 text-xs font-semibold"
+                            title="Salin Link Website"
+                          >
+                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+                            </svg>
+                            <span>Salin Link Website</span>
+                          </button>
+
+                          {isZeusMode && (
+                            <div className="flex gap-1.5 w-full">
+                              <button
+                                onClick={(e) => handleOpenEdit(item, e)}
+                                className="flex-1 py-1.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/20 rounded-lg transition-all text-[10px] font-bold"
+                              >
+                                ✏️ Edit
+                              </button>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setDeleteConfirmItem(item);
+                                }}
+                                className="flex-1 py-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 rounded-lg transition-all text-[10px] font-bold"
+                              >
+                                🗑️ Hapus
+                              </button>
+                            </div>
+                          )}
+                        </div>
+
+                      </div>
                     </div>
                   );
                 })}
@@ -873,7 +1010,7 @@
 
           {/* FOOTER */}
           <footer className="py-6 text-center text-slate-500 text-xs border-t border-slate-850 bg-slate-950/25 mt-16 select-none">
-            <p>© 2026 Element Directory.</p>
+            <p>©2026 Kanpa Element Directory.</p>
           </footer>
 
           {/* PROFILE POPUP DIALOG */}
@@ -881,7 +1018,6 @@
             <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center z-[100] p-4 animate-fadeIn">
               <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl relative animate-scaleUp">
                 
-                {/* Header */}
                 <div className="p-5 pb-0 flex justify-between items-center">
                   <span className="text-xs font-bold uppercase tracking-widest text-indigo-400">Status Profil</span>
                   <button 
@@ -898,7 +1034,6 @@
                   </button>
                 </div>
 
-                {/* Profile content */}
                 <div className="p-5 text-center">
                   <div className="w-16 h-16 mx-auto rounded-full bg-slate-850 flex items-center justify-center border-2 border-indigo-500/20 mb-3 text-2xl">
                     {isZeusMode ? "⚡" : "👤"}
@@ -915,7 +1050,6 @@
                     }
                   </p>
 
-                  {/* Authentication section */}
                   {!isZeusMode ? (
                     <div className="mt-5">
                       {!isLoginOpen ? (
@@ -923,12 +1057,10 @@
                           onClick={() => setIsLoginOpen(true)}
                           className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2.5 px-5 rounded-xl transition-all shadow-md"
                         >
-                          Login Sebagai Zeus
+                          Login
                         </button>
                       ) : (
                         <form onSubmit={handleLoginSubmit} className="mt-4 border-t border-slate-800/80 pt-4 text-left space-y-3.5 animate-fadeIn">
-                          
-                          {/* Username */}
                           <div>
                             <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">
                               Username
@@ -943,7 +1075,6 @@
                             />
                           </div>
 
-                          {/* Password */}
                           <div>
                             <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">
                               Password
@@ -988,7 +1119,6 @@
                           >
                             Submit
                           </button>
-
                         </form>
                       )}
                     </div>
@@ -1031,7 +1161,6 @@
                 </div>
 
                 <form onSubmit={handleSaveItem} className="p-4 overflow-y-auto space-y-3.5 flex-1 text-xs">
-                  
                   <div>
                     <label className="block font-bold text-slate-300 mb-1 uppercase tracking-wider">
                       Link Gambar Preview (Bisa Google Drive / Imgur / Dropbox)
@@ -1044,7 +1173,7 @@
                       className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-slate-100 focus:outline-none"
                     />
                     <p className="text-[10px] text-slate-500 mt-0.5">
-                      *Disarankan gambar berformat persegi (1080x1080px). Anda bisa menggunakan link 'Bagikan' Google Drive biasa, sistem akan mengonversinya secara otomatis!
+                      *Disarankan gambar berformat persegi (1080x1080px). Anda bisa menggunakan link 'Bagikan' Google Drive biasa!
                     </p>
                   </div>
 
@@ -1100,9 +1229,6 @@
                       placeholder="sekolah, siswa, guru, kelas"
                       className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-slate-100 focus:outline-none"
                     />
-                    <p className="text-[10px] text-slate-500 mt-0.5">
-                      Tag tidak tampil di list, namun aktif dicari lewat search bar.
-                    </p>
                   </div>
 
                   <div>
@@ -1181,7 +1307,6 @@
               className="fixed inset-0 bg-slate-950/95 backdrop-blur-xl flex flex-col items-center justify-center p-4 cursor-default z-[99999]"
               onClick={() => setActiveLargeImage(null)}
             >
-              {/* Back / Close button always visible at top right */}
               <div className="absolute top-6 right-6 z-[100000]">
                 <button 
                   type="button"
@@ -1222,7 +1347,6 @@
       );
     }
 
-    // Rendering our compiled React component to the standard UMD Root
     const container = document.getElementById('root');
     const root = ReactDOM.createRoot(container);
     root.render(<App />);
