@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <!-- Favicon -->
+  <link rel="icon" type="image/x-icon" href="https://i.ibb.co.com/SwkPCQn9/Kanpa-3.png">
+
+  <title>Element Directory</title>
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- React 18 & ReactDOM 18 UMD -->
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  
+  <!-- Babel Standalone -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <!-- Firebase v9 Compat SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+
+  <style>
+    /* Prevent standard scrollbar when lightbox is active */
+    .no-scroll {
+      overflow: hidden !important;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    @keyframes scaleUp {
+      from { transform: scale(0.95); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+    .animate-fadeIn {
+      animation: fadeIn 0.2s ease-out forwards;
+    }
+    .animate-scaleUp {
+      animation: scaleUp 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+    .animate-spin-slow {
+      animation: spin 8s linear infinite;
+    }
+  </style>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen font-sans antialiased">
+
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+
+    // Firebase Config yang sama persis dengan web utama
+    const firebaseConfig = {
+      apiKey: "AIzaSyCop2DkP6V6jbCWYQglDZKwvGyZVLEcUy4",
+      authDomain: "kanpa-directory-element.firebaseapp.com",
+      projectId: "kanpa-directory-element",
+      storageBucket: "kanpa-directory-element.firebasestorage.app",
+      messagingSenderId: "265083975683",
+      appId: "1:265083975683:web:f4840b12f42a5e3361f636"
+    };
+
+    const appId = "element-directory-production";
+
+    // Helper untuk mengonversi link Google Drive & Dropbox menjadi Direct Link Gambar
+    function getDirectImageUrl(url) {
+      if (!url) return "";
+      
+      if (url.includes("drive.google.com") || url.includes("docs.google.com")) {
+        let fileId = "";
+        const fileDMatch = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
+        if (fileDMatch && fileDMatch[1]) {
+          fileId = fileDMatch[1];
+        } else {
+          const idParamMatch = url.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+          if (idParamMatch && idParamMatch[1]) {
+            fileId = idParamMatch[1];
+          }
+        }
+        
+        if (fileId) {
+          return `https://lh3.googleusercontent.com/d/${fileId}`;
+        }
+      }
+
+      if (url.includes("dropbox.com")) {
+        return url.replace("?dl=0", "?raw=1").replace("&dl=0", "&raw=1");
+      }
+
+      return url;
+    }
+
+    const SAMPLE_DIRECTORIES = [
+      {
+        id: "sample-1",
+        title: "Ruang Kelas Virtual",
+        keyword: "set:nAfmbGBaHliL",
+        website: "https://classroom.google.com",
+        tags: "sekolah, siswa, guru, kelas, meja, kursi",
+        category: "KC",
+        imageLink: "https://images.unsplash.com/photo-1580582932707-520aed937b7b?w=600&auto=format&fit=crop&q=80",
+        createdAt: Date.now()
+      }
+    ];
+
+    let firebaseApp = null;
+    let auth = null;
+    let db = null;
+    let initErrorMsg = null;
+
+    try {
+      if (firebaseConfig.apiKey && !firebaseConfig.apiKey.includes("replace-if-needed")) {
+        firebaseApp = firebase.initializeApp(firebaseConfig);
+        auth = firebase.auth();
+        db = firebase.firestore();
+      } else {
+        initErrorMsg = "Firebase berjalan di Mode Demo Offline.";
+      }
+    } catch (error) {
+      console.error("Firebase Init Error:", error);
+      initErrorMsg = error.message;
+    }
+
+    function App() {
+      const [directories, setDirectories] = useState([]);
+      const [loading, setLoading] = useState(true);
+      const [isDemoMode, setIsDemoMode] = useState(!db || initErrorMsg !== null);
+      const [firebaseError, setFirebaseError] = useState(initErrorMsg);
+      
+      const [searchQuery, setSearchQuery] = useState("");
+      const [viewMode, setViewMode] = useState("list");
+
+      const [activeLargeImage, setActiveLargeImage] = useState(null);
+      const [toastMessage, setToastMessage] = useState(null);
+
+      useEffect(() => {
+        if (activeLargeImage) {
+          document.body.classList.add('no-scroll');
+        } else {
+          document.body.classList.remove('no-scroll');
+        }
+        return () => {
+          document.body.classList.remove('no-scroll');
+        };
+      }, [activeLargeImage]);
+
+      useEffect(() => {
+        if (isDemoMode || !auth) {
+          setDirectories(SAMPLE_DIRECTORIES);
+          setLoading(false);
+          return;
+        }
+
+        const unsubscribeAuth = auth.onAuthStateChanged((currentUser) => {
+          if (!currentUser) {
+            auth.signInAnonymously().catch(err => {
+              console.warn("Auth anonymous fail:", err);
+            });
+          }
+        });
+
+        return () => unsubscribeAuth();
+      }, [isDemoMode]);
+
+      // Mengambil data Firestore yang terhubung ke DB Utama (filter internal KC)
+      useEffect(() => {
+        if (isDemoMode || !db) return;
+
+        setLoading(true);
+        const publicCollectionRef = db.collection('artifacts').doc(appId).collection('public').doc('data').collection('directories');
+        
+        const unsubscribeSnapshot = publicCollectionRef.onSnapshot(
+          (snapshot) => {
+            const items = [];
+            snapshot.forEach((doc) => {
+              const data = doc.data();
+              if (data.category === 'KC') {
+                items.push({ id: doc.id, ...data });
+              }
+            });
+            
+            items.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+            setDirectories(items);
+            setLoading(false);
+          },
+          (error) => {
+            console.error("Firestore sync error:", error);
+            setLoading(false);
+            setFirebaseError(`Gagal sinkronisasi data: ${error.message}`);
+            setIsDemoMode(true);
+            setDirectories(SAMPLE_DIRECTORIES);
+          }
+        );
+
+        return () => unsubscribeSnapshot();
+      }, [isDemoMode]);
+
+      const showToast = (msg) => {
+        setToastMessage(msg);
+        setTimeout(() => {
+          setToastMessage(null);
+        }, 3000);
+      };
+
+      const fallbackCopyText = (text) => {
+        const textArea = document.createElement("textarea");
+        textArea.value = text;
+        textArea.style.position = "fixed";
+        textArea.style.left = "-99999px";
+        textArea.style.top = "-99999px";
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        try {
+          document.execCommand('copy');
+          textArea.remove();
+          return true;
+        } catch (err) {
+          textArea.remove();
+          return false;
+        }
+      };
+
+      const handleCopyText = (e, text, label) => {
+        e.stopPropagation();
+        e.preventDefault();
+        
+        if (navigator.clipboard && window.isSecureContext) {
+          navigator.clipboard.writeText(text)
+            .then(() => {
+              showToast(`${label} berhasil disalin!`);
+            })
+            .catch(() => {
+              if (fallbackCopyText(text)) {
+                showToast(`${label} berhasil disalin!`);
+              } else {
+                showToast(`Gagal menyalin ${label}.`);
+              }
+            });
+        } else {
+          if (fallbackCopyText(text)) {
+            showToast(`${label} berhasil disalin!`);
+          } else {
+            showToast(`Gagal menyalin ${label}.`);
+          }
+        }
+      };
+
+      const filteredDirectories = directories.filter((item) => {
+        if (searchQuery.trim() !== "") {
+          const query = searchQuery.toLowerCase();
+          const titleMatch = (item.title || "").toLowerCase().includes(query);
+          
+          const tagsString = (item.tags || "").toLowerCase();
+          const tagsArray = tagsString.split(',').map(t => t.trim());
+          const tagMatch = tagsArray.some(tag => tag.includes(query)) || tagsString.includes(query);
+
+          return titleMatch || tagMatch;
+        }
+
+        return true;
+      });
+
+      return (
+        <div className="min-h-screen bg-slate-900 text-slate-100 flex flex-col transition-colors duration-300">
+          
+          {/* Toast Notification */}
+          {toastMessage && (
+            <div className="fixed bottom-6 right-6 z-50 bg-indigo-600 text-white px-5 py-3 rounded-xl shadow-2xl flex items-center gap-2 animate-bounce border border-indigo-400">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+              <span className="font-medium text-sm">{toastMessage}</span>
+            </div>
+          )}
+
+          {firebaseError && (
+            <div className="bg-amber-950/90 border-b border-amber-800/60 p-3 text-xs md:text-sm">
+              <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
+                <span className="text-amber-400 font-semibold">{firebaseError}</span>
+                <button 
+                  onClick={() => setFirebaseError(null)}
+                  className="px-2.5 py-1 bg-slate-800 text-slate-400 hover:text-white rounded-lg text-xs"
+                >
+                  Sembunyikan
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* HEADER BAR */}
+          <header className="sticky top-0 z-30 bg-slate-900/90 backdrop-blur-md border-b border-slate-800/80 px-4 py-3 md:px-8">
+            <div className="max-w-7xl mx-auto flex justify-center items-center">
+              
+              {/* Center Brand */}
+              <div className="flex items-center gap-2 select-none">
+                <svg className="text-red-500 animate-spin-slow hidden md:block w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 19l92-7-9-7-9 7v7m0-13a5 5 0 1110 0 5 5 0 01-10 0z" />
+                </svg>
+                <span className="font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-red-400 via-orange-400 to-amber-300 tracking-wider text-lg">
+                  PORTAL ELEMENT
+                </span>
+              </div>
+
+            </div>
+          </header>
+
+          <main className="flex-1 max-w-5xl w-full mx-auto px-4 py-8 flex flex-col items-center">
+            
+            {/* Title */}
+            <div className="text-center mb-6">
+              <h1 className="text-3xl md:text-5xl font-black tracking-tight bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">
+                Element Directory
+              </h1>
+            </div>
+
+            {/* Search Bar & View Switcher */}
+            <div className="w-full bg-slate-800/40 p-3 rounded-2xl border border-slate-800/80 backdrop-blur-sm shadow-xl flex gap-2 mb-6 relative z-20 items-center">
+              
+              {/* Search Box */}
+              <div className="relative flex-1 w-full">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                </div>
+                <input 
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Cari judul atau tag..."
+                  className="w-full pl-10 pr-10 py-2.5 bg-slate-900 border border-slate-700/80 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500 text-slate-100 placeholder-slate-400 text-sm transition-all"
+                />
+                {searchQuery && (
+                  <button 
+                    onClick={() => setSearchQuery("")}
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-white transition-colors"
+                  >
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                )}
+              </div>
+
+              {/* VIEW MODE TOGGLE SWITCH (List vs Grid) */}
+              <div className="flex bg-slate-900 p-1 border border-slate-700/80 rounded-xl">
+                <button
+                  type="button"
+                  onClick={() => setViewMode("list")}
+                  className={`p-2 rounded-lg transition-all ${viewMode === 'list' ? 'bg-red-600 text-white shadow-md' : 'text-slate-400 hover:text-slate-200'}`}
+                  title="Tampilan List"
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
+                  </svg>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setViewMode("grid")}
+                  className={`p-2 rounded-lg transition-all ${viewMode === 'grid' ? 'bg-red-600 text-white shadow-md' : 'text-slate-400 hover:text-slate-200'}`}
+                  title="Tampilan Grid"
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+                  </svg>
+                </button>
+              </div>
+
+            </div>
+
+            {/* Total Item Status */}
+            <div className="w-full mb-4 flex justify-start items-center gap-2 px-1">
+              <span className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">Total List:</span>
+              <span className="px-2.5 py-0.5 text-xs rounded-full bg-slate-800 border border-slate-700 text-slate-300 font-medium">
+                 {filteredDirectories.length} list
+              </span>
+            </div>
+
+            {loading ? (
+              <div className="w-full flex flex-col items-center justify-center py-20 text-slate-400">
+                <div className="w-10 h-10 rounded-full border-4 border-red-500 border-t-transparent animate-spin mb-4"></div>
+                <p className="text-xs">Memuat data...</p>
+              </div>
+            ) : filteredDirectories.length === 0 ? (
+              <div className="w-full py-16 px-4 bg-slate-850/20 border border-dashed border-slate-800 rounded-2xl flex flex-col items-center text-center animate-fadeIn">
+                <div className="text-4xl mb-3">🔍</div>
+                <h3 className="text-base font-bold text-slate-200">Tidak ada data ditemukan</h3>
+                <p className="text-slate-500 text-xs mt-1.5 italic max-w-xs">
+                  "Belum ada data atau pencarian Anda tidak cocok."
+                </p>
+              </div>
+            ) : viewMode === "list" ? (
+              /* LIST VIEW MODE */
+              <div className="w-full flex flex-col gap-3 relative z-10 animate-fadeIn">
+                {filteredDirectories.map((item) => (
+                  <div 
+                    key={item.id}
+                    className="relative bg-slate-800/20 hover:bg-slate-800/50 rounded-xl border border-slate-800/80 hover:border-slate-700/60 transition-all duration-300 shadow-md flex flex-col md:flex-row items-stretch overflow-hidden"
+                  >
+                    {/* Left Column Content - Direct Card Link */}
+                    <div 
+                      onClick={() => {
+                        if (item.website) {
+                          window.open(item.website, '_blank', 'noopener,noreferrer');
+                        }
+                      }}
+                      className="flex-1 p-4 flex flex-col justify-between gap-4 cursor-pointer select-none group"
+                      title={item.title}
+                    >
+                      <div className="flex items-center gap-2">
+                        <h4 className="font-bold text-base md:text-lg text-slate-100 group-hover:text-red-400 transition-colors line-clamp-1">
+                          {item.title}
+                        </h4>
+                      </div>
+
+                      {item.keyword && (
+                        <div 
+                          onClick={(e) => e.stopPropagation()}
+                          className="flex items-center gap-2 self-start"
+                        >
+                          <span className="text-[11px] font-mono bg-slate-950/70 px-2.5 py-1 rounded-md border border-slate-800 flex items-center gap-1.5">
+                            <span className="text-[9px] uppercase font-semibold text-red-400 tracking-wider">Keyword:</span>
+                            <span className="text-slate-200 select-all">{item.keyword}</span>
+                          </span>
+                          
+                          <button
+                            type="button"
+                            onClick={(e) => handleCopyText(e, item.keyword, "Keyword")}
+                            className="px-2.5 py-1.5 bg-slate-900 border border-slate-700/60 text-slate-300 hover:text-white rounded-lg hover:bg-red-600 transition-all active:scale-95 shadow-sm flex items-center gap-1.5"
+                            title="Salin Keyword"
+                          >
+                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+                            </svg>
+                            <span className="text-[10px] font-bold uppercase tracking-wider">Salin</span>
+                          </button>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Right Column Content */}
+                    <div className="md:w-60 p-3 border-t md:border-t-0 md:border-l border-slate-800/80 flex md:flex-row justify-between items-center gap-3 bg-slate-950/10">
+                      <div className="flex flex-col gap-1.5 w-full flex-1">
+                        <button
+                          onClick={(e) => handleCopyText(e, item.website, "Link Website")}
+                          className="flex items-center justify-center gap-1.5 w-full px-2.5 py-1.5 bg-slate-800 hover:bg-red-600 text-slate-300 hover:text-white rounded-lg transition-all border border-slate-700/50 active:scale-95 text-xs font-semibold"
+                          title="Salin Link Website"
+                        >
+                          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+                          </svg>
+                          <span>Salin Link</span>
+                        </button>
+                      </div>
+
+                      {item.imageLink && (
+                        <div 
+                          onClick={() => setActiveLargeImage(item.imageLink)}
+                          className="relative w-14 h-14 rounded-lg overflow-hidden group/img cursor-zoom-in border border-slate-800 bg-slate-900 flex-shrink-0"
+                          title="Perbesar"
+                        >
+                          <img 
+                            src={getDirectImageUrl(item.imageLink)} 
+                            alt="preview" 
+                            className="w-full h-full object-cover group-hover/img:scale-105 transition-transform duration-200"
+                            onError={(e) => {
+                              e.target.src = "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=600&auto=format&fit=crop&q=80";
+                            }}
+                          />
+                          <div className="absolute inset-0 bg-slate-950/70 opacity-0 group-hover/img:opacity-100 flex flex-col items-center justify-center transition-all duration-200 p-1">
+                            <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10.5 7.5v6m3-3h-6" />
+                            </svg>
+                            <span className="text-[9px] font-bold text-white tracking-tight mt-0.5">Perbesar</span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              /* GRID VIEW MODE */
+              <div className="w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 relative z-10 animate-fadeIn">
+                {filteredDirectories.map((item) => (
+                  <div 
+                    key={item.id}
+                    className="bg-slate-800/30 hover:bg-slate-800/60 rounded-2xl border border-slate-800/80 hover:border-slate-700/80 transition-all duration-300 shadow-xl overflow-hidden flex flex-col group"
+                  >
+                    {/* Image Preview Box */}
+                    <div 
+                      className="relative w-full h-44 bg-slate-950 overflow-hidden cursor-zoom-in group/img"
+                      onClick={() => setActiveLargeImage(item.imageLink)}
+                    >
+                      <img 
+                        src={getDirectImageUrl(item.imageLink)} 
+                        alt={item.title} 
+                        className="w-full h-full object-cover group-hover/img:scale-105 transition-transform duration-300"
+                        onError={(e) => {
+                          e.target.src = "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=600&auto=format&fit=crop&q=80";
+                        }}
+                      />
+
+                      <div className="absolute inset-0 bg-slate-950/70 opacity-0 group-hover/img:opacity-100 flex flex-col items-center justify-center transition-all duration-200">
+                        <svg className="w-7 h-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10.5 7.5v6m3-3h-6" />
+                        </svg>
+                        <span className="text-xs font-bold text-white tracking-wider mt-1 uppercase">Perbesar</span>
+                      </div>
+                    </div>
+
+                    {/* Card Content */}
+                    <div className="p-4 flex-1 flex flex-col justify-between gap-3">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h4 
+                            onClick={() => {
+                              if (item.website) window.open(item.website, '_blank', 'noopener,noreferrer');
+                            }}
+                            className="font-bold text-base text-slate-100 hover:text-red-400 transition-colors cursor-pointer line-clamp-1"
+                            title={item.title}
+                          >
+                            {item.title}
+                          </h4>
+                        </div>
+
+                        {item.keyword && (
+                          <div className="mt-3 flex items-center justify-between bg-slate-950/70 px-3 py-2 rounded-xl border border-slate-800">
+                            <span className="text-[11px] font-mono text-slate-300 truncate mr-2">
+                              <span className="text-red-400 font-semibold mr-1.5">KW:</span>{item.keyword}
+                            </span>
+                            
+                            <button
+                              type="button"
+                              onClick={(e) => handleCopyText(e, item.keyword, "Keyword")}
+                              className="px-2 py-1 bg-slate-900 border border-slate-700/60 text-slate-300 hover:text-white rounded-lg hover:bg-red-600 transition-all active:scale-95 flex items-center gap-1 flex-shrink-0"
+                              title="Salin Keyword"
+                            >
+                              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+                              </svg>
+                              <span className="text-[9px] font-bold uppercase tracking-wider">Salin</span>
+                            </button>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Actions */}
+                      <div className="pt-2 border-t border-slate-800/80">
+                        <button
+                          onClick={(e) => handleCopyText(e, item.website, "Link Website")}
+                          className="flex items-center justify-center gap-1.5 w-full py-2 bg-slate-800 hover:bg-red-600 text-slate-200 hover:text-white rounded-xl transition-all border border-slate-700/50 active:scale-95 text-xs font-semibold"
+                          title="Salin Link Website"
+                        >
+                          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+                          </svg>
+                          <span>Salin Link Website</span>
+                        </button>
+                      </div>
+
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+          </main>
+
+          {/* FOOTER */}
+          <footer className="py-6 text-center text-slate-500 text-xs border-t border-slate-850 bg-slate-950/25 mt-16 select-none">
+            <p>© 2026 Element Directory.</p>
+          </footer>
+
+          {/* LIGHTBOX FOR PREVIEWING LARGE IMAGE */}
+          {activeLargeImage && (
+            <div 
+              className="fixed inset-0 bg-slate-950/95 backdrop-blur-xl flex flex-col items-center justify-center p-4 cursor-default z-[99999]"
+              onClick={() => setActiveLargeImage(null)}
+            >
+              <div className="absolute top-6 right-6 z-[100000]">
+                <button 
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setActiveLargeImage(null);
+                  }}
+                  className="flex items-center gap-1.5 px-4 py-2 bg-red-600 hover:bg-red-500 text-white font-bold rounded-full transition-all shadow-2xl border border-red-500/30 active:scale-95"
+                >
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                  <span className="text-xs tracking-wider uppercase">Tutup / Kembali</span>
+                </button>
+              </div>
+              
+              <div 
+                className="relative max-w-4xl max-h-[80vh] w-full flex items-center justify-center animate-scaleUp p-2"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <img 
+                  src={getDirectImageUrl(activeLargeImage)} 
+                  alt="Full preview" 
+                  className="max-w-full max-h-[75vh] rounded-2xl object-contain border border-slate-800 shadow-2xl bg-slate-900"
+                  onError={(e) => {
+                    e.target.src = "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1200&auto=format&fit=crop&q=80";
+                  }}
+                />
+              </div>
+              
+              <p className="text-slate-400 text-xs mt-3 tracking-wide select-none">
+                Klik di mana saja untuk kembali ke daftar list
+              </p>
+            </div>
+          )}
+
+        </div>
+      );
+    }
+
+    const container = document.getElementById('root');
+    const root = ReactDOM.createRoot(container);
+    root.render(<App />);
+  </script>
+</body>
+</html>
